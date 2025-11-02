@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Advisor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        'primary-dark': '#4a49c5',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            font-weight: 600;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+        }
+        .markdown-content h1 { font-size: 1.5em; }
+        .markdown-content h2 { font-size: 1.3em; }
+        .markdown-content h3 { font-size: 1.1em; }
+        .markdown-content p { margin-bottom: 0.75em; }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 1.5em;
+            margin-bottom: 0.75em;
+        }
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        .markdown-content li { margin-bottom: 0.25em; }
+        .markdown-content strong { font-weight: 600; }
+        .markdown-content code {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .dark .markdown-content code {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .spinner {
+            border: 3px solid rgba(93, 92, 222, 0.1);
+            border-top: 3px solid #5D5CDE;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-[#181818] text-gray-900 dark:text-gray-100 transition-colors min-h-screen">
+    <div class="max-w-5xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                AI Trading Advisor
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 text-base md:text-lg">
+                Upload multiple charts/images and provide market context for intelligent trading recommendations
+            </p>
+        </div>
+
+        <!-- Main Form -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-xl shadow-lg p-6 md:p-8 mb-6">
+            <form id="analysisForm">
+                <!-- Image Upload -->
+                <div class="mb-6">
+                    <label class="block text-base font-semibold mb-3">
+                        📊 Upload Charts/Screenshots (Multiple Images Supported)
+                    </label>
+                    <div class="flex flex-col gap-3">
+                        <input
+                            type="file"
+                            id="chartImage"
+                            accept="image/*"
+                            multiple
+                            class="block w-full text-base file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-base file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg"
+                            required
+                        >
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            💡 Upload multiple charts for cross-referencing analysis (e.g., different timeframes, related securities, technical indicators)
+                        </p>
+                        <div id="imagePreview" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <!-- Image previews will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Parameters -->
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <!-- Trading Timeframe -->
+                    <div>
+                        <label for="timeframeSlider" class="block text-base font-semibold mb-3">
+                            ⏰ Trading Timeframe
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <input
+                                type="range"
+                                id="timeframeSlider"
+                                min="0"
+                                max="2"
+                                step="1"
+                                value="1"
+                                class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                            >
+                        </div>
+                        <div class="flex justify-between mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span>Short-term</span>
+                            <span>Medium-term</span>
+                            <span>Long-term</span>
+                        </div>
+                        <p id="timeframeValue" class="mt-2 text-base font-semibold text-primary text-center">Medium-term (Weeks to Months)</p>
+                    </div>
+
+                    <!-- Investment Amount -->
+                    <div>
+                        <label class="block text-base font-semibold mb-3">
+                            💰 Investment Details
+                        </label>
+                        <input
+                            type="text"
+                            id="investmentAmount"
+                            placeholder="e.g., $10,000 or 15% of portfolio"
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                            required
+                        >
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Enter amount in USD or percentage of portfolio
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Current Trades Section -->
+                <div class="mb-6">
+                    <label class="block text-base font-semibold mb-3">
+                        📊 Current Trades in Effect (Optional)
+                    </label>
+                    <div id="tradesContainer" class="space-y-3 mb-3">
+                        <!-- Trades will be added here -->
+                    </div>
+                    <button
+                        type="button"
+                        id="addTradeBtn"
+                        class="px-4 py-2 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary dark:text-primary-light rounded-lg transition text-base font-medium border border-primary/30"
+                    >
+                        + Add Trade
+                    </button>
+                </div>
+
+                <!-- Context Inputs -->
+                <div class="space-y-4 mb-6">
+                    <h3 class="text-lg font-semibold border-b border-gray-300 dark:border-gray-700 pb-2">
+                        🌍 Market Context & Events
+                    </h3>
+
+                    <!-- Interest Rates & Inflation -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+                        <h4 class="text-base font-semibold mb-4">📊 Central Bank Rates & Inflation</h4>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <!-- US Fed Rate -->
+                            <div>
+                                <label for="fedRate" class="block text-base font-medium mb-2">
+                                    🇺🇸 US Federal Reserve Rate
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        type="range"
+                                        id="fedRate"
+                                        min="0"
+                                        max="10"
+                                        step="0.25"
+                                        value="4.5"
+                                        class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    >
+                                    <span id="fedRateValue" class="text-lg font-semibold min-w-[4rem] text-right">4.50%</span>
+                                </div>
+                            </div>
+
+                            <!-- Bank of England Rate -->
+                            <div>
+                                <label for="boeRate" class="block text-base font-medium mb-2">
+                                    🇬🇧 Bank of England Rate
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        type="range"
+                                        id="boeRate"
+                                        min="0"
+                                        max="10"
+                                        step="0.25"
+                                        value="4.75"
+                                        class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    >
+                                    <span id="boeRateValue" class="text-lg font-semibold min-w-[4rem] text-right">4.75%</span>
+                                </div>
+                            </div>
+
+                            <!-- US Inflation -->
+                            <div>
+                                <label for="usInflation" class="block text-base font-medium mb-2">
+                                    🇺🇸 US Inflation Rate
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        id="usInflation"
+                                        min="0"
+                                        max="20"
+                                        step="0.1"
+                                        placeholder="e.g., 3.2"
+                                        class="flex-1 px-4 py-2 text-base bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                                    >
+                                    <span class="text-base font-medium">%</span>
+                                </div>
+                            </div>
+
+                            <!-- UK Inflation -->
+                            <div>
+                                <label for="ukInflation" class="block text-base font-medium mb-2">
+                                    🇬🇧 UK Inflation Rate
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        id="ukInflation"
+                                        min="0"
+                                        max="20"
+                                        step="0.1"
+                                        placeholder="e.g., 2.8"
+                                        class="flex-1 px-4 py-2 text-base bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                                    >
+                                    <span class="text-base font-medium">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Global Events & Geopolitical News -->
+                    <div>
+                        <label class="block text-base font-medium mb-2">
+                            📰 Global Events & Geopolitical Factors (Bloomberg, BBC, etc.)
+                        </label>
+                        <textarea
+                            id="globalNews"
+                            rows="3"
+                            placeholder="e.g., Trade negotiations, international developments, policy changes from Bloomberg, BBC, or other sources..."
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                        ></textarea>
+                        <div class="mt-2">
+                            <input
+                                type="file"
+                                id="globalNewsImages"
+                                accept="image/*"
+                                multiple
+                                class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Election News -->
+                    <div>
+                        <label class="block text-base font-medium mb-2">
+                            🗳️ Election News & Political Developments
+                        </label>
+                        <textarea
+                            id="electionNews"
+                            rows="3"
+                            placeholder="e.g., Upcoming elections, campaign developments, polling data, political transitions..."
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                        ></textarea>
+                        <div class="mt-2">
+                            <input
+                                type="file"
+                                id="electionImages"
+                                accept="image/*"
+                                multiple
+                                class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Natural Disasters -->
+                    <div>
+                        <label for="naturalEvents" class="block text-base font-medium mb-2">
+                            🌪️ Natural Disasters & Weather Events
+                        </label>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            💡 Check sources: NOAA, Weather.com, European Severe Weather Database
+                        </p>
+                        <textarea
+                            id="naturalEvents"
+                            rows="3"
+                            placeholder="e.g., Hurricanes affecting oil production, droughts impacting agriculture..."
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                        ></textarea>
+                        <div class="mt-2">
+                            <input
+                                type="file"
+                                id="weatherImages"
+                                accept="image/*"
+                                multiple
+                                class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            >
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Upload weather maps, satellite images, or screenshots</p>
+                        </div>
+                    </div>
+
+                    <!-- Military Activity -->
+                    <div>
+                        <label for="militaryActivity" class="block text-base font-medium mb-2">
+                            ⚔️ Military Activity & Defense Developments
+                        </label>
+                        <textarea
+                            id="militaryActivity"
+                            rows="3"
+                            placeholder="e.g., Military exercises, defense spending, conflicts, peacekeeping operations..."
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                        ></textarea>
+                        <div class="mt-2">
+                            <input
+                                type="file"
+                                id="militaryImages"
+                                accept="image/*"
+                                multiple
+                                class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            >
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Upload maps, news screenshots, or related images</p>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div>
+                        <label for="additionalInfo" class="block text-base font-medium mb-2">
+                            ℹ️ Additional Relevant Information
+                        </label>
+                        <textarea
+                            id="additionalInfo"
+                            rows="3"
+                            placeholder="e.g., Industry trends, competitor news, earnings reports, commodity prices, market sentiment..."
+                            class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- User Questions Section -->
+                <div class="mb-6 bg-gradient-to-r from-primary/5 to-purple-500/5 dark:from-primary/10 dark:to-purple-500/10 rounded-xl p-6 border-2 border-primary/20 dark:border-primary/30">
+                    <label for="userQuestions" class="block text-base font-semibold mb-3">
+                        ❓ What Do You Want Answered?
+                    </label>
+                    <textarea
+                        id="userQuestions"
+                        rows="4"
+                        placeholder="e.g., What price should I close my Gold position? Do I need to diversify more? Should I hedge against inflation? What's the best entry point for Copper?"
+                        class="w-full px-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition resize-none"
+                    ></textarea>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        💡 Be specific about what you need help with - this helps the AI provide more targeted recommendations
+                    </p>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    id="analyzeBtn"
+                    class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-4 px-6 rounded-lg transition text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    🚀 Analyze & Get Recommendation
+                </button>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl shadow-lg p-6 md:p-8 fade-in">
+                <!-- Loading State -->
+                <div id="loadingState" class="flex flex-col items-center justify-center py-12">
+                    <div class="spinner mb-4"></div>
+                    <p class="text-gray-600 dark:text-gray-400 text-base">Analyzing your chart and market conditions...</p>
+                    <p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Generating main analysis, price points, and commodity recommendations...</p>
+                </div>
+
+                <!-- Analysis Results -->
+                <div id="analysisResults" class="hidden">
+                    <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+                        <h2 class="text-2xl font-bold">📈 Trading Analysis</h2>
+                        <div class="flex gap-3 flex-wrap">
+                            <button
+                                id="downloadPdfBtn"
+                                class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition text-base font-medium shadow-md hover:shadow-lg"
+                            >
+                                📄 Download PDF
+                            </button>
+                            <button
+                                id="newAnalysisBtn"
+                                class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition text-base font-medium"
+                            >
+                                New Analysis
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Recommendation -->
+                    <div id="quickRecommendation" class="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 dark:from-primary/20 dark:via-purple-500/20 dark:to-primary/20 rounded-lg p-6 shadow-lg border-2 border-primary/50 dark:border-primary/70 mb-6">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">⚡</span>
+                            <h3 class="text-xl font-bold">Quick Recommendation</h3>
+                        </div>
+                        <div id="quickRecommendationContent" class="text-lg font-semibold"></div>
+                    </div>
+
+                    <!-- Main Analysis Report -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border-4 border-primary/30 dark:border-primary/50 mb-6">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+                            <span class="text-2xl">📊</span>
+                            <h3 class="text-xl font-bold">Main Analysis Report</h3>
+                        </div>
+                        <div id="analysisContent" class="markdown-content prose dark:prose-invert max-w-none"></div>
+                    </div>
+
+                    <!-- Price Action Recommendations -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border-4 border-green-500/30 dark:border-green-500/50 mb-6">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+                            <span class="text-2xl">💲</span>
+                            <h3 class="text-xl font-bold">Price Point Strategy</h3>
+                        </div>
+                        <div id="pricePointContent" class="markdown-content prose dark:prose-invert max-w-none"></div>
+                    </div>
+
+                    <!-- Commodity Monitoring -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border-4 border-amber-500/30 dark:border-amber-500/50">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+                            <span class="text-2xl">🌾</span>
+                            <h3 class="text-xl font-bold">Commodity Monitoring Recommendations</h3>
+                        </div>
+                        <div id="commodityContent" class="markdown-content prose dark:prose-invert max-w-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode setup
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Timeframe slider
+        const timeframeSlider = document.getElementById('timeframeSlider');
+        const timeframeValue = document.getElementById('timeframeValue');
+        const timeframeOptions = [
+            { value: 'short-term', label: 'Short-term (Days to Weeks)' },
+            { value: 'medium-term', label: 'Medium-term (Weeks to Months)' },
+            { value: 'long-term', label: 'Long-term (Months to Years)' }
+        ];
+
+        timeframeSlider.addEventListener('input', function() {
+            const index = parseInt(this.value);
+            timeframeValue.textContent = timeframeOptions[index].label;
+        });
+
+        // Rate slider updates
+        const fedRateSlider = document.getElementById('fedRate');
+        const fedRateValue = document.getElementById('fedRateValue');
+        const boeRateSlider = document.getElementById('boeRate');
+        const boeRateValue = document.getElementById('boeRateValue');
+
+        fedRateSlider.addEventListener('input', function() {
+            fedRateValue.textContent = parseFloat(this.value).toFixed(2) + '%';
+        });
+
+        boeRateSlider.addEventListener('input', function() {
+            boeRateValue.textContent = parseFloat(this.value).toFixed(2) + '%';
+        });
+
+        // Dynamic trades management
+        let tradeCounter = 0;
+
+        function addTrade() {
+            tradeCounter++;
+            const tradesContainer = document.getElementById('tradesContainer');
+            const tradeDiv = document.createElement('div');
+            tradeDiv.className = 'bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700';
+            tradeDiv.id = `trade-${tradeCounter}`;
+            tradeDiv.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="flex-1 grid md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Trade Name</label>
+                            <input
+                                type="text"
+                                class="trade-name w-full px-3 py-2 text-base bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                                placeholder="e.g., Gold, Copper, AAPL"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Position Type</label>
+                            <select class="trade-type w-full px-3 py-2 text-base bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition">
+                                <option value="buy">Buy/Long</option>
+                                <option value="sell">Sell/Short</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Entry Price</label>
+                            <input
+                                type="text"
+                                class="trade-price w-full px-3 py-2 text-base bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                                placeholder="e.g., $1,850"
+                            >
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="remove-trade mt-6 px-3 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition text-sm font-medium"
+                        onclick="removeTrade(${tradeCounter})"
+                    >
+                        Remove
+                    </button>
+                </div>
+            `;
+            tradesContainer.appendChild(tradeDiv);
+        }
+
+        window.removeTrade = function(id) {
+            const tradeDiv = document.getElementById(`trade-${id}`);
+            if (tradeDiv) {
+                tradeDiv.remove();
+            }
+        };
+
+        document.getElementById('addTradeBtn').addEventListener('click', addTrade);
+
+        // Image preview for multiple files
+        document.getElementById('chartImage').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const previewContainer = document.getElementById('imagePreview');
+
+            if (files.length > 0) {
+                previewContainer.innerHTML = '';
+                previewContainer.classList.remove('hidden');
+
+                Array.from(files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgWrapper = document.createElement('div');
+                        imgWrapper.className = 'relative';
+                        imgWrapper.innerHTML = `
+                            <div class="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg z-10">
+                                Chart ${index + 1}
+                            </div>
+                            <img src="${e.target.result}" class="w-full h-auto rounded-lg border-2 border-gray-300 dark:border-gray-700 shadow-md" alt="Chart ${index + 1}">
+                        `;
+                        previewContainer.appendChild(imgWrapper);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        // Helper function to convert file to base64
+        async function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Form submission
+        document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Get form values
+            const chartImages = document.getElementById('chartImage').files;
+            const timeframeIndex = parseInt(document.getElementById('timeframeSlider').value);
+            const timeframe = timeframeOptions[timeframeIndex].value;
+            const investmentAmount = document.getElementById('investmentAmount').value;
+
+            // Current trades
+            const trades = [];
+            document.querySelectorAll('#tradesContainer > div').forEach(tradeDiv => {
+                const name = tradeDiv.querySelector('.trade-name').value;
+                const type = tradeDiv.querySelector('.trade-type').value;
+                const price = tradeDiv.querySelector('.trade-price').value;
+                if (name && price) {
+                    trades.push({ name, type, price });
+                }
+            });
+
+            // Rates and inflation
+            const fedRate = document.getElementById('fedRate').value;
+            const boeRate = document.getElementById('boeRate').value;
+            const usInflation = document.getElementById('usInflation').value;
+            const ukInflation = document.getElementById('ukInflation').value;
+
+            // News and events
+            const globalNews = document.getElementById('globalNews').value;
+            const electionNews = document.getElementById('electionNews').value;
+            const naturalEvents = document.getElementById('naturalEvents').value;
+            const militaryActivity = document.getElementById('militaryActivity').value;
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            const userQuestions = document.getElementById('userQuestions').value;
+
+            // Images from various sources
+            const globalNewsImages = Array.from(document.getElementById('globalNewsImages').files);
+            const electionImages = Array.from(document.getElementById('electionImages').files);
+            const weatherImages = Array.from(document.getElementById('weatherImages').files);
+            const militaryImages = Array.from(document.getElementById('militaryImages').files);
+
+            if (!chartImages || chartImages.length === 0) {
+                showCustomAlert('Please upload at least one chart image');
+                return;
+            }
+
+            // Convert FileList to Array
+            const chartImagesArray = Array.from(chartImages);
+
+            // Combine all images
+            const allImages = [
+                ...chartImagesArray,
+                ...globalNewsImages,
+                ...electionImages,
+                ...weatherImages,
+                ...militaryImages
+            ];
+
+            // Show results section with loading state
+            document.getElementById('resultsSection').classList.remove('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('analysisResults').classList.add('hidden');
+            document.getElementById('analysisContent').innerHTML = '';
+            document.getElementById('pricePointContent').innerHTML = '';
+            document.getElementById('commodityContent').innerHTML = '';
+            document.getElementById('quickRecommendationContent').innerHTML = '';
+
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Build context string
+            let contextString = `**Trading Parameters:**
+- Timeframe: ${timeframe}
+- Investment Amount: ${investmentAmount}`;
+
+            if (trades.length > 0) {
+                contextString += '\n\n**Current Trades in Effect:**';
+                trades.forEach((trade, index) => {
+                    contextString += `\n${index + 1}. ${trade.name} - ${trade.type === 'buy' ? 'Long' : 'Short'} position at ${trade.price}`;
+                });
+            }
+
+            contextString += '\n\n**Economic Indicators:**';
+            contextString += `\n- US Federal Reserve Rate: ${parseFloat(fedRate).toFixed(2)}%`;
+            contextString += `\n- Bank of England Rate: ${parseFloat(boeRate).toFixed(2)}%`;
+            if (usInflation) {
+                contextString += `\n- US Inflation Rate: ${usInflation}%`;
+            }
+            if (ukInflation) {
+                contextString += `\n- UK Inflation Rate: ${ukInflation}%`;
+            }
+
+            contextString += '\n\n**Market Context & Events:**';
+            if (globalNews.trim()) {
+                contextString += `\n- Global Events & Geopolitical Factors: ${globalNews}`;
+                if (globalNewsImages.length > 0) {
+                    contextString += ` (${globalNewsImages.length} image(s) attached)`;
+                }
+            }
+            if (electionNews.trim()) {
+                contextString += `\n- Election News & Political Developments: ${electionNews}`;
+                if (electionImages.length > 0) {
+                    contextString += ` (${electionImages.length} image(s) attached)`;
+                }
+            }
+            if (naturalEvents.trim()) {
+                contextString += `\n- Natural Disasters & Weather Events: ${naturalEvents}`;
+                if (weatherImages.length > 0) {
+                    contextString += ` (${weatherImages.length} weather map(s)/image(s) attached)`;
+                }
+            }
+            if (militaryActivity.trim()) {
+                contextString += `\n- Military Activity & Defense: ${militaryActivity}`;
+                if (militaryImages.length > 0) {
+                    contextString += ` (${militaryImages.length} image(s) attached)`;
+                }
+            }
+            if (additionalInfo.trim()) {
+                contextString += `\n- Additional Information: ${additionalInfo}`;
+            }
+
+            if (userQuestions.trim()) {
+                contextString += `\n\n**User's Specific Questions:**\n${userQuestions}`;
+            }
+
+            const totalContextImages = globalNewsImages.length + electionImages.length + weatherImages.length + militaryImages.length;
+            if (totalContextImages > 0) {
+                contextString += `\n\n**Note:** ${chartImagesArray.length} trading chart(s) + ${totalContextImages} context image(s) have been attached. Please analyze all images for comprehensive insights.`;
+            }
+
+            // Build prompts
+            const imageCountText = chartImagesArray.length > 1 ? `${chartImagesArray.length} charts/images` : '1 chart/image';
+            const crossRefText = chartImagesArray.length > 1 ? '\n\n**IMPORTANT:** You have been provided with multiple charts/images. Please cross-reference them in your analysis. Look for patterns, confirmations, or contradictions across different timeframes, indicators, or related securities. Mention specific chart numbers (Chart 1, Chart 2, etc.) when making observations.' : '';
+            const userQuestionsEmphasis = userQuestions.trim() ? '\n\n**CRITICAL: The user has specific questions that MUST be addressed directly in your analysis. Make sure to provide clear, specific answers to their questions.**' : '';
+
+            const mainPrompt = `You are an expert financial analyst and trading advisor. Analyze the provided ${imageCountText} along with the market context below and provide a comprehensive trading recommendation.${crossRefText}${userQuestionsEmphasis}
+
+${contextString}
+
+**Please provide your analysis in the following format:**
+
+## 📊 Chart Analysis
+[Analyze the technical aspects of the chart(s): price action, trends, support/resistance levels, indicators, volume, etc. If multiple charts are provided, cross-reference them and note which chart you're referring to.]
+
+## 🌍 Market Context Assessment
+[Evaluate how the provided market context (events, rates, etc.) impacts this security]
+
+## 🎯 RECOMMENDATION: **[BUY/SELL/HOLD]**
+[Clearly state your recommendation in bold within the heading, e.g., "RECOMMENDATION: **BUY**"]
+
+## 💡 Justification
+[Provide a detailed paragraph explaining your recommendation, integrating both technical analysis and market context. If multiple charts were provided, explain how they support or contradict each other.]
+
+## ❓ Answers to User's Questions
+[If the user provided specific questions, answer each one directly and thoroughly here. If no questions were asked, you can skip this section.]
+
+## 📋 Additional Information Suggestions
+[List 3-5 specific pieces of information that would strengthen this analysis]
+
+## ⚠️ Risk Factors
+[Highlight key risks to consider for this trade]
+
+Be specific, actionable, and professional.`;
+
+            const pricePrompt = `Based on the ${imageCountText} and market context provided, give specific price point recommendations for entry and exit strategies.${crossRefText}
+
+${contextString}
+
+**Please provide specific price levels in the following format:**
+
+## 🎯 Entry Strategy
+- **If BUY Recommendation:** Specify ideal entry price(s) or price range
+- **If SELL Recommendation:** Specify exit price(s) or price range
+- **If HOLD Recommendation:** Specify price levels to watch for potential action
+
+## 📍 Key Price Levels
+- **Support Levels:** [List specific price points]
+- **Resistance Levels:** [List specific price points]
+- **Stop Loss:** [Specific price to cut losses]
+- **Take Profit Targets:** [Target 1, Target 2, Target 3 with specific prices]
+
+## 🔔 Action Triggers
+- **Buy if price reaches:** [Specific price]
+- **Sell if price reaches:** [Specific price]
+- **Hold while price stays between:** [Range]
+
+## ⏰ Time-Based Considerations
+[Based on the ${timeframe} timeframe, when should these levels be reassessed?]
+
+Be very specific with actual price numbers based on the chart analysis.`;
+
+            const commodityPrompt = `Based on the security/stock shown in the ${imageCountText} and the market context, recommend specific commodities to monitor that could impact this investment.${crossRefText}
+
+${contextString}
+
+**Please provide commodity monitoring recommendations in the following format:**
+
+## 🌾 Key Commodities to Monitor
+[List 4-6 specific commodities that correlate with or impact this security]
+
+For each commodity, provide:
+- **Commodity Name & Symbol**
+- **Relationship to this security:** [How it impacts the investment]
+- **Current relevance:** [Why it matters now given the market context]
+- **What to watch for:** [Specific price movements or trends to monitor]
+
+## 📊 Correlation Analysis
+[Explain the overall relationship between these commodities and the security]
+
+## 🚨 Alert Thresholds
+[Suggest specific commodity price levels that would signal important changes for this investment]
+
+## 💡 How to Use This Information
+[Practical guidance on incorporating commodity data into trading decisions]
+
+Be specific about which commodities matter most for this particular security and timeframe.`;
+
+            try {
+                // Convert all images to base64
+                const imageData = await Promise.all(
+                    allImages.map(async (file) => ({
+                        type: 'image',
+                        source: {
+                            type: 'base64',
+                            media_type: file.type,
+                            data: await fileToBase64(file)
+                        }
+                    }))
+                );
+
+                // Call the serverless function for main analysis
+                const mainResponse = await fetch('/.netlify/functions/claude', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: mainPrompt,
+                        images: imageData
+                    })
+                });
+
+                if (!mainResponse.ok) {
+                    throw new Error(`HTTP error! status: ${mainResponse.status}`);
+                }
+
+                const mainData = await mainResponse.json();
+                
+                // Display main analysis
+                const analysisContent = document.getElementById('analysisContent');
+                const quickRecommendationContent = document.getElementById('quickRecommendationContent');
+                
+                analysisContent.innerHTML = marked.parse(mainData.content);
+
+                // Extract recommendation
+                const recommendationMatch = mainData.content.match(/##\s*🎯\s*RECOMMENDATION:\s*\*\*([^*]+)\*\*/i) ||
+                                           mainData.content.match(/##\s*🎯\s*RECOMMENDATION:\s*([^\n]+)/i) ||
+                                           mainData.content.match(/RECOMMENDATION:\s*\*\*([^*]+)\*\*/i) ||
+                                           mainData.content.match(/RECOMMENDATION:\s*([^\n]+)/i);
+
+                if (recommendationMatch) {
+                    const recommendation = recommendationMatch[1].trim();
+                    const recommendationLower = recommendation.toLowerCase();
+                    let emoji = '📋';
+                    let colorClass = 'text-gray-700 dark:text-gray-300';
+
+                    if (recommendationLower.includes('buy') || recommendationLower.includes('long')) {
+                        emoji = '📈';
+                        colorClass = 'text-green-600 dark:text-green-400';
+                    } else if (recommendationLower.includes('sell') || recommendationLower.includes('short')) {
+                        emoji = '📉';
+                        colorClass = 'text-red-600 dark:text-red-400';
+                    } else if (recommendationLower.includes('hold')) {
+                        emoji = '⏸️';
+                        colorClass = 'text-amber-600 dark:text-amber-400';
+                    }
+
+                    quickRecommendationContent.innerHTML = `
+                        <div class="${colorClass}">
+                            ${emoji} ${recommendation}
+                        </div>
+                    `;
+                } else {
+                    quickRecommendationContent.innerHTML = `<div class="text-gray-600 dark:text-gray-400">See detailed analysis below</div>`;
+                }
+
+                // Call for price point analysis
+                const priceResponse = await fetch('/.netlify/functions/claude', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: pricePrompt,
+                        images: imageData
+                    })
+                });
+
+                if (priceResponse.ok) {
+                    const priceData = await priceResponse.json();
+                    document.getElementById('pricePointContent').innerHTML = marked.parse(priceData.content);
+                }
+
+                // Call for commodity analysis
+                const commodityResponse = await fetch('/.netlify/functions/claude', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: commodityPrompt,
+                        images: imageData
+                    })
+                });
+
+                if (commodityResponse.ok) {
+                    const commodityData = await commodityResponse.json();
+                    document.getElementById('commodityContent').innerHTML = marked.parse(commodityData.content);
+                }
+
+                // Show results
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('analysisResults').classList.remove('hidden');
+
+            } catch (err) {
+                console.error('Analysis error:', err);
+                document.getElementById('analysisContent').innerHTML =
+                    `<div class="text-red-600 dark:text-red-400 font-semibold">❌ Error: ${err.message || 'Failed to generate analysis. Please try again.'}</div>`;
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('analysisResults').classList.remove('hidden');
+            }
+        });
+
+        // Download PDF button
+        document.getElementById('downloadPdfBtn').addEventListener('click', async function() {
+            const button = this;
+            const originalText = button.innerHTML;
+
+            button.innerHTML = '⏳ Generating PDF...';
+            button.disabled = true;
+
+            try {
+                const pdfContent = document.createElement('div');
+                pdfContent.style.padding = '20px';
+                pdfContent.style.backgroundColor = '#ffffff';
+                pdfContent.style.color = '#000000';
+                pdfContent.style.fontFamily = 'Arial, sans-serif';
+
+                const title = document.createElement('h1');
+                title.style.textAlign = 'center';
+                title.style.marginBottom = '20px';
+                title.style.color = '#5D5CDE';
+                title.textContent = 'AI Trading Advisor - Analysis Report';
+                pdfContent.appendChild(title);
+
+                const timestamp = document.createElement('p');
+                timestamp.style.textAlign = 'center';
+                timestamp.style.marginBottom = '30px';
+                timestamp.style.fontSize = '12px';
+                timestamp.style.color = '#666';
+                timestamp.textContent = `Generated on ${new Date().toLocaleString()}`;
+                pdfContent.appendChild(timestamp);
+
+                const quickRec = document.getElementById('quickRecommendationContent').cloneNode(true);
+                const quickRecSection = document.createElement('div');
+                quickRecSection.style.marginBottom = '20px';
+                quickRecSection.style.padding = '15px';
+                quickRecSection.style.border = '2px solid #5D5CDE';
+                quickRecSection.style.borderRadius = '8px';
+                quickRecSection.style.backgroundColor = '#f5f5ff';
+                const quickRecTitle = document.createElement('h2');
+                quickRecTitle.style.marginBottom = '10px';
+                quickRecTitle.textContent = '⚡ Quick Recommendation';
+                quickRecSection.appendChild(quickRecTitle);
+                quickRecSection.appendChild(quickRec);
+                pdfContent.appendChild(quickRecSection);
+
+                const mainAnalysis = document.getElementById('analysisContent').cloneNode(true);
+                const mainSection = document.createElement('div');
+                mainSection.style.marginBottom = '20px';
+                mainSection.style.padding = '15px';
+                mainSection.style.border = '1px solid #ccc';
+                mainSection.style.borderRadius = '8px';
+                const mainTitle = document.createElement('h2');
+                mainTitle.style.marginBottom = '10px';
+                mainTitle.textContent = '📊 Main Analysis Report';
+                mainSection.appendChild(mainTitle);
+                mainSection.appendChild(mainAnalysis);
+                pdfContent.appendChild(mainSection);
+
+                const pricePoint = document.getElementById('pricePointContent').cloneNode(true);
+                const priceSection = document.createElement('div');
+                priceSection.style.marginBottom = '20px';
+                priceSection.style.padding = '15px';
+                priceSection.style.border = '1px solid #ccc';
+                priceSection.style.borderRadius = '8px';
+                const priceTitle = document.createElement('h2');
+                priceTitle.style.marginBottom = '10px';
+                priceTitle.textContent = '💲 Price Point Strategy';
+                priceSection.appendChild(priceTitle);
+                priceSection.appendChild(pricePoint);
+                pdfContent.appendChild(priceSection);
+
+                const commodity = document.getElementById('commodityContent').cloneNode(true);
+                const commoditySection = document.createElement('div');
+                commoditySection.style.marginBottom = '20px';
+                commoditySection.style.padding = '15px';
+                commoditySection.style.border = '1px solid #ccc';
+                commoditySection.style.borderRadius = '8px';
+                const commodityTitle = document.createElement('h2');
+                commodityTitle.style.marginBottom = '10px';
+                commodityTitle.textContent = '🌾 Commodity Monitoring Recommendations';
+                commoditySection.appendChild(commodityTitle);
+                commoditySection.appendChild(commodity);
+                pdfContent.appendChild(commoditySection);
+
+                const opt = {
+                    margin: 10,
+                    filename: `Trading_Analysis_${new Date().toISOString().split('T')[0]}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(pdfContent).save().then(() => {
+                    button.innerHTML = '✅ Downloaded!';
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }).catch((error) => {
+                    console.error('PDF generation error:', error);
+                    button.innerHTML = '❌ Error';
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                });
+
+            } catch (error) {
+                console.error('PDF content preparation error:', error);
+                button.innerHTML = '❌ Error';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+            }
+        });
+
+        // New analysis button
+        document.getElementById('newAnalysisBtn').addEventListener('click', function() {
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('analysisContent').innerHTML = '';
+            document.getElementById('pricePointContent').innerHTML = '';
+            document.getElementById('commodityContent').innerHTML = '';
+            document.getElementById('quickRecommendationContent').innerHTML = '';
+            document.getElementById('analysisForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // Custom alert function
+        function showCustomAlert(message) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
+                    <p class="text-gray-700 dark:text-gray-300 mb-4 text-base">${message}</p>
+                    <div class="flex justify-end">
+                        <button class="px-4 py-2 bg-primary text-white hover:bg-primary-dark rounded-lg" onclick="this.closest('.fixed').remove()">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
