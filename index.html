@@ -826,7 +826,7 @@ Be specific about which commodities matter most for this particular security and
                 );
 
                 // Call the serverless function for main analysis
-                const mainResponse = await fetch('/.netlify/functions/claude', {
+                const mainResponse = await fetch('/api/claude', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -882,7 +882,7 @@ Be specific about which commodities matter most for this particular security and
                 }
 
                 // Call for price point analysis
-                const priceResponse = await fetch('/.netlify/functions/claude', {
+                const priceResponse = await fetch('/api/analyze.js', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -899,7 +899,7 @@ Be specific about which commodities matter most for this particular security and
                 }
 
                 // Call for commodity analysis
-                const commodityResponse = await fetch('/.netlify/functions/claude', {
+                const commodityResponse = await fetch('/api/analyze.js', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
